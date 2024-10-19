@@ -3,36 +3,61 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart,
   Bar,
-  XAxis,
-  YAxis,
+  BarChart,
   CartesianGrid,
-  Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
-  CardTitle,
-  CardDescription
+  CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Activity,
   HeartPulse,
+  RotateCcw,
   Thermometer,
   Wind,
-  Activity,
-  Maximize2,
   ZoomIn,
-  ZoomOut,
-  RotateCcw
+  ZoomOut
 } from 'lucide-react';
 import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPredictions, ReportData } from '@/components/hooks/prediction';
+import { ReportType } from '@/components/Report';
+
+interface VitalSignCardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+function VitalSignCard({ title, value, icon, color }: VitalSignCardProps) {
+  return (
+    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50 flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-gray-500">
+          {title}
+        </CardTitle>
+        <div className={color}>{icon}</div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
 
 type Disease =
   | 'Bacterial Pneumonia'
@@ -68,6 +93,25 @@ const patientData = {
   ]
 };
 
+function reportTypeToText(data: ReportData | undefined): string {
+  if(data === undefined) {
+    return '';
+  }
+  const { reportType } = data as ReportData;
+  switch (reportType.toString()) {
+    case '0':
+      return 'Pulmonia';
+    case '1':
+      return 'Retinopatia';
+    case '2':
+      return 'Cancer de piel';
+    case '3':
+      return 'Cancer de MAMA';
+    default:
+      return 'Unknown Report Type';
+  }
+}
+
 const diseaseDescriptions: Record<Disease, string> = {
   'Bacterial Pneumonia':
     'Infección pulmonar causada por bacterias. Síntomas incluyen fiebre alta, tos con esputo y dificultad para respirar. Tratamiento: antibióticos.',
@@ -81,12 +125,43 @@ const diseaseDescriptions: Record<Disease, string> = {
     'Infección viral que puede causar desde síntomas leves hasta neumonía severa. Síntomas: fiebre, tos seca, fatiga. Tratamiento: principalmente sintomático y de apoyo.'
 };
 
-export default function Report() {
+// const usePredictions = () => {
+//   var { data, isLoading } = useQuery<ReportData, Error>({
+//     queryKey: ['prediction'],
+//     queryFn: () => fetchPredictions(params.reportId),
+//     staleTime: 5 * 60 * 1000,
+//     refetchOnWindowFocus: false,
+//     refetchInterval: false,
+//     retry: 1
+//   });
+//
+//   return{
+//     data,
+//     isLoading,
+//     filtered: data?.predictions.filter(pred=> pred.id)
+//   }
+// }
+
+export default function ReportComponent({
+  params
+}: {
+  params: { reportId: string };
+}) {
+  const { data, isLoading } = useQuery<ReportData, Error>({
+    queryKey: ['prediction'],
+    queryFn: () => fetchPredictions(params.reportId),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    retry: 1
+  });
+
+  console.log(data);
   const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
   const [imageZoom, setImageZoom] = useState(1);
 
   const handleBarClick = (data: any) => {
-    setSelectedDisease(data.name);
+    setSelectedDisease(data.description);
   };
 
   const handleZoomIn = () => setImageZoom((prev) => Math.min(prev + 0.1, 2));
@@ -103,23 +178,23 @@ export default function Report() {
       >
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 text-transparent bg-clip-text">
-            Dashboard de Salud del Paciente
+            Salud del Paciente
           </h1>
           <p className="text-sm text-gray-500">
             Paciente: {patientData.name} | Edad: {patientData.age} | Género:{' '}
             {patientData.gender}
           </p>
         </div>
-        <Button className="bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all">
-          Generar Informe
-        </Button>
+        {/*<Button className="bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all">*/}
+        {/*  Generar Informe*/}
+        {/*</Button>*/}
       </motion.div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Vista General</TabsTrigger>
-          <TabsTrigger value="xray">Radiografía</TabsTrigger>
-          <TabsTrigger value="history">Historial Médico</TabsTrigger>
+          <TabsTrigger value="xray">{reportTypeToText(data)}</TabsTrigger>
+          {/*<TabsTrigger value="history">Historial Médico</TabsTrigger>*/}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -159,7 +234,16 @@ export default function Report() {
               </CardHeader>
               <CardContent className="p-6">
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={patientData.score} layout="vertical">
+                  <BarChart
+                    data={data?.predictions.map((pred) => {
+                      return {
+                        value: pred.result,
+                        name: pred.labelName,
+                        description: pred.explanation
+                      };
+                    })}
+                    layout="vertical"
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" domain={[0, 1]} />
                     <YAxis dataKey="name" type="category" width={150} />
@@ -211,16 +295,14 @@ export default function Report() {
           <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50">
               <CardTitle className="text-lg font-semibold text-gray-700">
-                Radiografía de Tórax
+                {reportTypeToText(data)}
               </CardTitle>
-              <CardDescription>
-                Diagnóstico: {patientData.predictedLabel}
-              </CardDescription>
+              <CardDescription>Imagen Subida por el Paciente</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="relative w-full h-[500px] mb-4">
                 <Image
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/test_0_956-Te51NdgZih7W0K0bNyyuljFRZRMsIh.jpeg"
+                  src={data?.urlReport}
                   alt="Radiografía de tórax del paciente"
                   layout="fill"
                   objectFit="contain"
@@ -242,66 +324,43 @@ export default function Report() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history">
-          <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50">
-              <CardTitle className="text-lg font-semibold text-gray-700">
-                Historial Médico
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <ScrollArea className="h-[400px] w-full rounded-md border p-4">
-                {patientData.medicalHistory.map((event, index) => (
-                  <div key={index} className="mb-4 last:mb-0">
-                    <h3 className="font-semibold">{event.date}</h3>
-                    <p>{event.event}</p>
-                  </div>
-                ))}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/*<TabsContent value="history">*/}
+        {/*  <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow">*/}
+        {/*    <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50">*/}
+        {/*      <CardTitle className="text-lg font-semibold text-gray-700">*/}
+        {/*        Historial Médico*/}
+        {/*      </CardTitle>*/}
+        {/*    </CardHeader>*/}
+        {/*    <CardContent className="p-6">*/}
+        {/*      <ScrollArea className="h-[400px] w-full rounded-md border p-4">*/}
+        {/*        {patientData.medicalHistory.map((event, index) => (*/}
+        {/*          <div key={index} className="mb-4 last:mb-0">*/}
+        {/*            <h3 className="font-semibold">{event.date}</h3>*/}
+        {/*            <p>{event.event}</p>*/}
+        {/*          </div>*/}
+        {/*        ))}*/}
+        {/*      </ScrollArea>*/}
+        {/*    </CardContent>*/}
+        {/*  </Card>*/}
+        {/*</TabsContent>*/}
       </Tabs>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.8 }}
-        className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg shadow-inner"
-      >
-        <h4 className="font-semibold mb-2 text-lg">Resumen del Dashboard</h4>
-        <p>
-          Este dashboard proporciona una visión detallada del estado de salud
-          del paciente, incluyendo signos vitales, puntuaciones de predicción de
-          enfermedades, radiografía de tórax e historial médico. La condición
-          predicha es {patientData.predictedLabel} con una probabilidad del{' '}
-          {(patientData.score[0].value * 100).toFixed(2)}%. Se recomienda una
-          evaluación exhaustiva y seguimiento continuo.
-        </p>
-      </motion.div>
+      {/*<motion.div*/}
+      {/*  initial={{ opacity: 0, y: 20 }}*/}
+      {/*  animate={{ opacity: 1, y: 0 }}*/}
+      {/*  transition={{ duration: 0.5, delay: 0.8 }}*/}
+      {/*  className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg shadow-inner"*/}
+      {/*>*/}
+      {/*  <h4 className="font-semibold mb-2 text-lg">Resumen del Dashboard</h4>*/}
+      {/*  <p>*/}
+      {/*    Este dashboard proporciona una visión detallada del estado de salud*/}
+      {/*    del paciente, incluyendo signos vitales, puntuaciones de predicción de*/}
+      {/*    enfermedades, radiografía de tórax e historial médico. La condición*/}
+      {/*    predicha es {patientData.predictedLabel} con una probabilidad del{' '}*/}
+      {/*    {(patientData.score[0].value * 100).toFixed(2)}%. Se recomienda una*/}
+      {/*    evaluación exhaustiva y seguimiento continuo.*/}
+      {/*  </p>*/}
+      {/*</motion.div>*/}
     </main>
-  );
-}
-
-interface VitalSignCardProps {
-  title: string;
-  value: string;
-  icon: React.ReactNode;
-  color: string;
-}
-
-function VitalSignCard({ title, value, icon, color }: VitalSignCardProps) {
-  return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50 flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-gray-500">
-          {title}
-        </CardTitle>
-        <div className={color}>{icon}</div>
-      </CardHeader>
-      <CardContent className="pt-4">
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
   );
 }

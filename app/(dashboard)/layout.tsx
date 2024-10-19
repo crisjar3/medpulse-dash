@@ -40,9 +40,9 @@ import { SearchInput } from './search';
 
 
 const navItems: NavItem[] = [
-  { href: '#', label: 'Dashboard', icon: <PieChart className="h-5 w-5" /> },
-  { href: '#', label: 'Examenes', icon: <ClipboardIcon  className="h-5 w-5" /> },
-  { href: '/', label: 'Reportes', icon: <HeartIcon className="h-5 w-5" /> },
+  { href: '/', label: 'Dashboard', icon: <PieChart className="h-5 w-5" /> },
+  { href: '/', label: 'Examenes', icon: <ClipboardIcon  className="h-5 w-5" /> },
+  { href: 'report/1aedfbe1-cea4-46c0-85e8-112162b6dae8', label: 'Reportes', icon: <HeartIcon className="h-5 w-5" /> },
   {
     href: '/customers',
     label: 'Medicinas',
@@ -72,7 +72,7 @@ export default function DashboardLayout({
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
             <DashboardBreadcrumb />
-            <SearchInput />
+            {/*<SearchInput />*/}
             <User />
           </header>
           <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">

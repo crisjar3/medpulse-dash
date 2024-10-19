@@ -258,26 +258,90 @@
 
 import { useState } from 'react';
 import Patients from '@/components/patients';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TimeLine from '@/components/TimeLine';
-import Report from '@/components/Report';
-
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery
+} from '@tanstack/react-query';
+import TimeLine, { Appointment } from '@/components/TimeLine';
+import Report, { ReportData } from '@/components/Report';
+import axios from 'axios';
 
 const queryClient = new QueryClient();
 export default function Component() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-screen bg-gray-100">
-        <div className="w-1/3 p-4 bg-blue-50">
-          <TimeLine />
-        </div>
-        <div className="flex-1 p-4 space-y-4">
-          <Patients />
-          <Report />
-        </div>
-      </div>
+      <LoginForm />
     </QueryClientProvider>
   );
 }
+
+export function LoginForm() {
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const { data, isLoading } = useAppointments();
+  const { data: dataReport, isLoading: isLoadingReport } = useReport();
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <div className="w-1/3 p-4 bg-blue-50">
+        {!isLoading ? (
+          <TimeLine appointments={data === undefined ? [] : data} />
+        ) : null}
+      </div>
+      <div className="flex-1 p-4 space-y-4">
+        <Patients />
+
+        {!isLoadingReport ? (
+          <Report reports={dataReport === undefined ? [] : dataReport} />
+        ) : null}
+
+      </div>
+    </div>
+  );
+}
+
+const fetchAppointments = async (): Promise<Appointment[]> => {
+  try {
+    const { data } = await axios.get('api/appointments');
+
+    console.log(data);
+    return data as Appointment[];
+  } catch (error: any) {
+    console.error('Login fetch error:', error);
+    throw error;
+  }
+};
+
+const fetchReport = async (): Promise<ReportData[]> => {
+  try {
+    const { data } = await axios.get('api/reports');
+
+    console.log(data);
+    return data as ReportData[]
+  } catch (error: any) {
+    console.error('Login fetch error:', error);
+    throw error;
+  }
+};
+
+export const useReport = () => {
+  return useQuery<ReportData[], Error>({
+    queryKey: ['report'],
+    queryFn: fetchReport,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    retry: 1
+  });
+};
+
+export const useAppointments = () => {
+  return useQuery<Appointment[], Error>({
+    queryKey: ['appointment'],
+    queryFn: fetchAppointments,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    retry: 1
+  });
+};

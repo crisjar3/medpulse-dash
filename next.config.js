@@ -9,6 +9,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com'
+      },
+      {
+        protocol: 'https',
+        hostname: '*localtraining.blob.core.windows.net*'
       }
     ],
     domains: ['hebbkx1anhila5yf.public.blob.vercel-storage.com'],
